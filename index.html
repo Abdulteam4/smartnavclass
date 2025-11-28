@@ -96,7 +96,7 @@
       font-size: 12px;
       font-weight: bold;
       z-index: 2000;
-      max-width: 100%;
+      max-width: 500%;
       line-height: 1.1em;
       text-align: right;
       word-wrap: break-word;
@@ -590,9 +590,9 @@
   var data = blockData[block][floor];
 
   // 1) Compute a good starting zoom based on image size and screen
-  var maxZoom = -0.5;          // no zooming in too much
-  var minZoom = -2;         // allow some zoom out if user wants
-  var padding = 80;         // pixels of margin around image
+  var maxZoom = 0;          // no zooming in too much
+  var minZoom = -10;         // allow some zoom out if user wants
+  var padding = 200;         // pixels of margin around image
 
   map = L.map('map', {
     crs: L.CRS.Simple,
