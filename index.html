@@ -78,6 +78,8 @@
       z-index: 9999;
       font-size: 13px;
       cursor: pointer;
+      width: auto;
+      display: inline-block;
     }
 
     .leaflet-marker-icon {
@@ -583,51 +585,52 @@
      RENDER FLOOR — includes the zoom fix so full floor visible
      ========================================================== */
   function renderFloor(block, floor, start, end) {
-    // remove previous map if exists
-    if (map) { map.remove(); map = null; }
+  if (map) map.remove();
 
-    var data = blockData[block][floor];
+  var data = blockData[block][floor];
 
-    // create map with simple CRS for image overlay
-    map = L.map('map', { crs: L.CRS.Simple, zoomControl: true });
+  // 1) Compute a good starting zoom based on image size and screen
+  var maxZoom = 0;          // no zooming in too much
+  var minZoom = -2;         // allow some zoom out if user wants
+  var padding = 50;         // pixels of margin around image
 
-    // bounds must be [ [0,0], [height, width] ] because Leaflet expects [y,x]
-    var bounds = [[0, 0], [data.height, data.width]];
+  map = L.map('map', {
+    crs: L.CRS.Simple,
+    minZoom: minZoom,
+    maxZoom: maxZoom,
+    zoomSnap: 0.25,
+    zoomControl: true
+  });
 
-    // image overlay
-    L.imageOverlay(data.image, bounds).addTo(map);
+  var bounds = [[0, 0], [data.height, data.width]];
+  L.imageOverlay(data.image, bounds).addTo(map);
 
-    // FIT BOUNDS with padding so whole floor is visible (like your first image)
-    map.fitBounds(bounds, { padding: [50, 50] });
+  // 2) Fit whole image into view with padding (prevents over‑zoom in)
+  map.fitBounds(bounds, { padding: [padding, padding] });
 
-    // compute bestZoom and lock minZoom so Leaflet doesn't auto-zoom in
-    const bestZoom = map.getBoundsZoom(bounds, true);
-    map.setZoom(bestZoom);
-    map.setMinZoom(bestZoom);
+  // 3) Optionally lock panning so user cannot go outside image
+  map.setMaxBounds(bounds);
 
-    // Add markers with popups (optional)
-    for (let loc in data.locations) {
-      L.marker(data.locations[loc]).addTo(map).bindPopup(loc);
-    }
-
-    // Draw path if exists
-    const pathKey = `${start}-${end}`;
-    const path = data.paths[pathKey];
-    routeInfo.innerText = `${block.toUpperCase()} BLOCK | ${floor.toUpperCase()} FLOOR | ${start} ➜ ${end}`;
-
-    if (path) {
-      L.polyline(path, {
-        color: "red",
-        weight: 5,
-        className: "moving-dots"
-      }).addTo(map);
-    } else {
-      showMessage(`No path between ${start} and ${end}`);
-    }
-
-    // Optional: bring routeInfo and zoom control above overlay
-    // (Leaflet controls are added automatically)
+  for (let loc in data.locations) {
+    L.marker(data.locations[loc]).addTo(map).bindPopup(loc);
   }
+
+  const pathKey = `${start}-${end}`;
+  const path = data.paths[pathKey];
+  routeInfo.innerText =
+    `${block.toUpperCase()} BLOCK | ${floor.toUpperCase()} FLOOR | ${start.toUpperCase()} ➜ ${end.toUpperCase()}`;
+
+  if (path) {
+    L.polyline(path, {
+      color: "red",
+      weight: 5,
+      className: "moving-dots"
+    }).addTo(map);
+  } else {
+    showMessage(`No path between ${start} and ${end}`);
+  }
+}
+
 
   // End of script
 </script>
