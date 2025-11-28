@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Smart Indoor Navigation System</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      background: #fff;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    /* ---------- FRONT PAGE ---------- */
+    #frontPage {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 15px;
+      text-align: center;
+      background: linear-gradient(to bottom right,yellow,green);
+    }
+
+    #frontPage h1 {
+      font-size: 6vw;
+      margin-bottom: 20px;
+    }
+
+    label { width: 90%; max-width: 350px; display:block; text-align:left; margin-top:8px; }
+    select, button {
+      width: 90%;
+      max-width: 350px;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+    }
+
+    button { background: #d33; color: white; font-weight: bold; cursor: pointer; }
+    button:active { transform: scale(0.97); }
+
+    /* ---------- MAP PAGE ---------- */
+    #mapPage {
+      display: none;
+      height: 100vh;
+      width: 100vw;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
+      position: absolute;
+      inset: 0;
+    }
+
+    #backBtn {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      padding: 6px 10px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      z-index: 9999;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .leaflet-marker-icon {
+      transform: scale(0.75);
+    }
+
+    #routeInfo {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 2000;
+      max-width: 45%;
+      line-height: 1.1em;
+      text-align: right;
+      word-wrap: break-word;
+    }
+
+    .leaflet-control-zoom { margin-top: 70px !important; }
+
+    .moving-dots {
+      stroke-dasharray: 5, 10;
+      animation: dashmove 1s linear infinite;
+    }
+
+    @keyframes dashmove { to { stroke-dashoffset: -15; } }
+
+    /* MESSAGE BOX */
+    #messageBox {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 18px;
+      border-radius: 12px;
+      width: 85%;
+      max-width: 320px;
+      text-align: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      z-index: 3000;
+      display: none;
+    }
+
+    #messageBox h2 { margin: 0 0 6px 0; font-size: 18px; }
+    #messageBox p { margin: 0; font-size: 14px; }
+    #messageBox button {
+      padding: 10px 14px;
+      border: none;
+      background: #4e54c8;
+      color: white;
+      margin-top: 12px;
+      border-radius: 8px;
+      width: 100%;
+      cursor:pointer;
+    }
+
+    /* responsive small screens */
+    @media (max-width: 420px) {
+      #routeInfo { font-size: 11px; max-width: 60%; }
+      #backBtn { font-size: 12px; padding: 5px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- MESSAGE BOX -->
+<div id="messageBox">
+  <h2>Navigation Info</h2>
+  <p id="msgText"></p>
+  <button id="msgOkBtn">OK</button>
+</div>
+
+<!-- FRONT PAGE -->
+<div id="frontPage">
+  <h1>Indoor Smart Navigation System</h1>
+
+  <label for="blockSelect">Select Block:</label>
+  <select id="blockSelect">
+    <option value="" disabled selected>Select your Block Entrance</option>
+    <option value="academic">Academic Block Entrance</option>
+    <option value="administrative">Administrative Block Entrance</option>
+  </select>
+
+  <label for="endSelect">Destination:</label>
+  <select id="endSelect">
+    <option value="" disabled selected>Select your Lecture Hall</option>
+    <option value="LH01">Lecture Hall 01</option>
+    <option value="LH02">Lecture Hall 02</option>
+    <option value="LH03">Lecture Hall 03</option>
+    <option value="LH04">Lecture Hall 04</option>
+    <option value="LH05">Lecture Hall 05</option>
+    <option value="LH06">Lecture Hall 06</option>
+    <option value="LH07">Lecture Hall 07</option>
+    <option value="LH08">Lecture Hall 08</option>
+    <option value="LH09">Lecture Hall 09</option>
+    <option value="LH10">Lecture Hall 10</option>
+    <option value="LH11">Lecture Hall 11</option>
+    <option value="LH12">Lecture Hall 12</option>
+    <option value="LH13">Lecture Hall 13</option>
+    <option value="LH14">Lecture Hall 14</option>
+    <option value="LH15">Lecture Hall 15</option>
+    <option value="LH16">Lecture Hall 16</option>
+    <option value="LH17">Lecture Hall 17</option>
+    <option value="LH18">Lecture Hall 18</option>
+    <option value="LH19">Lecture Hall 19</option>
+    <option value="LH20">Lecture Hall 20</option>
+    <option value="LH21">Lecture Hall 21</option>
+    <option value="LH22">Lecture Hall 22</option>
+    <option value="LH23">Lecture Hall 23</option>
+    <option value="LH23A">Lecture Hall 23A</option>
+    <option value="LH23B">Lecture Hall 23B</option>
+    <option value="LH24">Lecture Hall 24</option>
+    <option value="LH25">Lecture Hall 25</option>
+    <option value="LH26">Lecture Hall 26</option>
+    <option value="LH27">Lecture Hall 27</option>
+    <option value="LH28">Lecture Hall 28</option>
+    <option value="LH30">Lecture Hall 30</option>
+    <option value="LH32">Lecture Hall 32</option>
+    <option value="LH33">Lecture Hall 33</option>
+    <option value="LH34">Lecture Hall 34</option>
+    <option value="LH34A">Lecture Hall 34A</option>
+    <option value="LH34B">Lecture Hall 34B</option>
+    <option value="LH34C">Lecture Hall 34C</option>
+    <option value="LH36">Lecture Hall 36</option>
+    <option value="LH37">Lecture Hall 37</option>
+    <option value="LH38">Lecture Hall 38</option>
+    <option value="LH39">Lecture Hall 39</option>
+    <option value="LH40">Lecture Hall 40</option>
+    <option value="LH41">Lecture Hall 41</option>
+    <option value="LH42">Lecture Hall 42</option>
+    <option value="LH43">Lecture Hall 43</option>
+    <option value="LH44">Lecture Hall 44</option>
+    <option value="LH45">Lecture Hall 45</option>
+    <option value="LH46">Lecture Hall 46</option>
+    <option value="LH47">Lecture Hall 47</option>
+    <option value="LH48">Lecture Hall 48</option>
+    <option value="LH49">Lecture Hall 49</option>
+    <option value="LH50">Lecture Hall 50</option>
+    <option value="LH51">Lecture Hall 51</option>
+    <option value="LH52">Lecture Hall 52</option>
+    <option value="LH53">Lecture Hall 53</option>
+    <option value="LH54">Lecture Hall 54</option>
+    <option value="LH55">Lecture Hall 55</option>
+  </select>
+
+  <button id="startBtn">Find Path</button>
+</div>
+
+<!-- MAP PAGE -->
+<div id="mapPage">
+  <button id="backBtn">⬅ Back</button>
+  <div id="routeInfo"></div>
+  <div id="map"></div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+  /* ----------------------
+     Helper: show message box
+     ---------------------- */
+  const messageBox = document.getElementById("messageBox");
+  const msgText = document.getElementById("msgText");
+  const msgOkBtn = document.getElementById("msgOkBtn");
+  msgOkBtn.addEventListener("click", closeMessage);
+
+  function showMessage(text) {
+    msgText.innerHTML = text;
+    messageBox.style.display = "block";
+    // auto-close in 2.5s
+    setTimeout(() => {
+      closeMessage();
+    }, 2500);
+  }
+  function closeMessage() {
+    messageBox.style.display = "none";
+  }
+
+  /* ==========================
+     Block data (full as given)
+     ========================== */
+  var blockData = {
+    academic: {
+      ground: {
+        image: "Academic ground floor.png",
+        width: 1700,
+        height: 1300,
+        locations: {
+          ENTRY: [121,834],
+          LH01: [201,226],
+          LH02: [1182,76],
+          LH03: [1214,388],
+          LH04: [1222,1250],
+          LH05: [1200,1562],
+          LH06: [239,1418],
+          STAIRS: [802,1104]
+        },
+        paths: {
+          "entrance-LH01": [[121,834],[393,838],[395,224],[201,226]],
+          "entrance-LH02":[[121,834],[988,834],[988,226],[1182,226],[1182,76]],
+          "entrance-LH03":[[121,834],[988,834],[988,388],[1214,388]],
+          "entrance-LH04":[[121,834],[996,834],[996,1250],[1222,1250]],
+          "entrance-LH05":[[121,834],[1014,834],[1014,1420],[1200,1418],[1200,1562]],
+          "entrance-LH06":[[121,834],[393,834],[393,1418],[239,1418]],
+          "entrance-stairs":[[121,834],[806,834],[802,1104]]
+        }
+      },
+      first: {
+        image: "Academic first floor.png",
+        width: 1700,
+        height: 1300,
+        locations: {
+          LH07:[190,232],
+          LH08:[1160,78],
+          LH09:[1195,392],
+          LH10:[1217,1250],
+          LH11:[1175,1554],
+          LH12:[234,1412],
+          STAIRS: [798,1106]
+        },
+        paths: {
+          "stairs-LH07":[[798,1106],[800,1020],[994,1020],[994,594],[381,594],[381,232],[190,232]],
+          "stairs-LH08":[[798,1106],[800,1020],[994,1020],[994,224],[1174,224],[1174,78]],
+          "stairs-LH09":[[798,1106],[800,1020],[994,1020],[992,392],[1200,392]],
+          "stairs-LH10":[[798,1106],[800,1020],[994,1020],[994,1250],[1234,1250]],
+          "stairs-LH11":[[798,1106],[800,1020],[944,1020],[944,1408],[1192,1408],[1192,1554]],
+          "stairs-LH12":[[798,1106],[800,1020],[395,1020],[395,1020],[395,1412],[249,1412]]
+        }
+      },
+
+      second: {
+        image: "Academic second floor.png",
+        width: 1700,
+        height: 1300,
+        locations: {
+          LH13:[201,226],
+          LH14:[1174,132],
+          LH15:[1186,1556],
+          LH16:[239,1418],
+          STAIRS:[791,1108]
+        },
+        paths: {
+          "stairs-LH13":[[791,1108],[791,990],[990,990],[990,612],[393,612],[393,226],[201,226]],
+          "stairs-LH14":[[791,1108],[791,990],[990,990],[990,312],[1174,312],[1174,132]],
+          "stairs-LH15":[[791,1108],[791,990],[990,990],[990,1298],[1186,1298],[1186,1556]],
+          "stairs-LH16":[[791,1108],[791,990],[393,990],[393,1418],[239,1418]]
+        }
+      },
+
+      third: {
+        image: "Academic third floor.png",
+        width: 1700,
+        height: 1300,
+        locations: {
+          LH17:[217,184],
+          LH18:[1090,138],
+          LH19:[1194,466],
+          LH20:[1194,772],
+          LH21:[1192,1126],
+          LH22:[1175,1550],
+          LH23:[239,1412],
+          LH23A:[249,936],
+          LH23B:[245,624],
+          STAIRS:[672,1140]
+        },
+        paths: {
+          "stairs-LH17":[[672,1140],[672,954],[417,954],[417,184],[217,184]],
+          "stairs-LH18":[[672,1140],[672,954],[910,954],[910,304],[1090,304],[1090,138]],
+          "stairs-LH19":[[672,1140],[672,954],[910,954],[910,466],[1194,466]],
+          "stairs-LH20":[[672,1140],[672,954],[910,954],[910,772],[1194,772]],
+          "stairs-LH21":[[672,1140],[672,954],[910,954],[910,1126],[1192,1126]],
+          "stairs-LH22":[[672,1140],[672,954],[910,954],[910,1348],[1175,1348],[1175,1550]],
+          "stairs-LH23":[[672,1140],[672,954],[417,954],[417,1412],[239,1412]]
+        }
+      }
+    },
+
+    administrative: {
+      ground: {
+        image: "Administrative ground floor.png",
+        width: 2350,
+        height: 1230,
+        locations: {
+          entrance: [87,1016],
+          LH50: [716,1684],
+          LH51: [1154,490],
+          LH52: [1154,325],
+          STAIRS: [409,1310]
+        },
+        paths: {
+          "entrance-LH50": [[87,1016],[165,1016],[165,1202],[528,1202],[528,1684],[716,1684]],
+          "entrance-LH51": [[87,1016],[165,1016],[165,818],[964,818],[964,490],[1154,490]],
+          "entrance-LH52": [[87,1016],[165,1016],[165,818],[964,818],[964,342],[1154,342]],
+          "entrance-stairs": [[87,1016],[165,1016],[165,1202],[409,1202],[409,1310]]
+        }
+      },
+
+      first: {
+        image: "Administrative first floor.png",
+        width: 2350,
+        height: 1230,
+        locations: {
+          LH30: [654,1392],
+          LH36: [323,1408],
+          LH37: [321,2184],
+          LH46: [790,590],
+          LH47: [784,134],
+          STAIRS:[413,1310]
+        },
+        paths: {
+          "stairs-LH30": [[413,1310],[413,1208],[654,1208],[654,1392]],
+          "stairs-LH36":[[413,1310],[413,1208],[328,1208],[328,1408]],
+          "stairs-LH37":[[413,1310],[413,1208],[173,1208],[173,2184],[321,2184]],
+          "stairs-LH46":[[413,1310],[413,1208],[526,1208],[526,816],[790,816],[790,590]],
+          "stairs-LH47":[[413,1310],[413,1208],[526,1208],[526,816],[636,816],[636,134],[784,134]]
+        }
+      },
+
+      second:{
+        image: "Administrative second floor.png",
+        width: 2350,
+        height: 1230,
+        locations: {
+          stairs:[448,1296],
+          LH38: [234,1396],
+          LH39: [234,2178],
+          LH32: [600,1364],
+          LH53: [600,1586],
+          LH54: [600,1764],
+          LH33: [600,2192],
+          LH24: [1030,1778],
+          LH25: [1030,1984],
+          LH26: [1030,2212],
+          LH42: [305,596],
+          LH43: [305,128],
+          LH48: [750,680],
+          LH49: [750,207],
+          LH55: [600,1974]
+        },
+        paths: {
+          "stairs-LH32": [[448,1296],[448,1214],[600,1214],[600,1364]],
+          "stairs-LH53": [[448,1296],[448,1214],[540,1214],[540,1586],[600,1586]],
+          "stairs-LH54": [[448,1296],[448,1214],[540,1214],[540,1764],[600,1764]],
+          "stairs-LH55": [[448,1296],[448,1214],[540,1214],[540,1974],[600,1974]],
+          "stairs-LH33": [[448,1296],[448,1214],[540,1214],[540,2192],[600,2192]],
+          "stairs-LH38": [[448,1296],[448,1214],[234,1214],[234,1396]],
+          "stairs-LH39": [[448,1296],[448,1214],[173,1214],[173,2178],[234,2178]],
+          "stairs-LH24": [[448,1296],[448,1214],[938,1214],[938,1778],[1030,1778]],
+          "stairs-LH25": [[448,1296],[448,1214],[938,1214],[938,1984],[1030,1984]],
+          "stairs-LH26": [[448,1296],[448,1214],[938,1214],[938,2212],[1030,2212]],
+          "stairs-LH48": [[448,1296],[448,1214],[540,1214],[540,810],[750,810],[750,680]],
+          "stairs-LH49": [[448,1296],[448,1214],[540,1214],[540,810],[638,810],[638,207],[750,207]],
+          "stairs-LH42": [[448,1296],[448,1214],[540,1214],[540,810],[305,810],[305,596]],
+          "stairs-LH43": [[448,1296],[448,1214],[173,1214],[173,128],[305,128]]
+        }
+      },
+      third: {
+        image: "Administrative third floor.png",
+        width: 2350,
+        height: 1230,
+        locations: {
+          LH40:[245,1384],
+          LH41:[240,2200],
+          LH34:[610,1388],
+          LH56:[610,1656],
+          LH57:[610,1928],
+          LH58:[610,2216],
+          LH28:[1048,1996],
+          LH27:[1048,2222],
+          LH44:[293,646],
+          LH45:[293,80],
+          STAIRS:[444,1310]
+        },
+        paths: {
+          "stairs-LH40":[[444,1310],[444,1206],[245,1206],[245,1384]],
+          "stairs-LH41":[[444,1310],[444,1206],[167,1206],[167,2200],[240,2200]],
+          "stairs-LH34":[[444,1310],[444,1206],[534,1206],[534,1388],[610,1388]],
+          "stairs-LH28":[[444,1310],[444,1206],[948,1206],[948,1996],[1048,1996]],
+          "stairs-LH27":[[444,1310],[444,1206],[948,1206],[948,2222],[1048,2222]],
+          "stairs-LH44":[[444,1310],[444,1206],[512,1206],[512,804],[293,804],[293,646]],
+          "stairs-LH45":[[444,1310],[444,1206],[512,1206],[512,804],[183,804],[183,80],[293,80]]
+        }
+      },
+    }
+  };
+
+  /* ========= Floor connections ========= */
+  var floorConnections = {
+    academic: {
+      "ground-first": { start: [802,1104], end: [798,1106] },
+      "ground-second": { start:[802,1104], end:[791,1108] },
+      "ground-third": { start:[802,1104], end:[672,1140] }
+    },
+    administrative: {
+      "ground-first": { start: [409,1310], end: [413,1310] },
+      "ground-second": { start: [409,1310], end: [448,1296] },
+      "ground-third": { start: [409,1310], end: [444,1310] }
+    }
+  };
+
+  /* ========== Helper: determine block from LH ========== */
+  function findBlock(room) {
+    const num = parseInt(room.replace("LH", ""));
+    if (num >= 1 && num <= 23) return "academic";
+    if (num >= 24 && num <= 55) return "administrative";
+    return "invalid";
+  }
+
+  /* ========== Helper: determine floor from LH ========== */
+  function findFloor(block, room) {
+    const num = parseInt(room.replace("LH", ""));
+    if (block === "academic") {
+      if (num <= 6) return "ground";
+      else if (num <= 12) return "first";
+      else if (num <= 16) return "second";
+      else return "third";
+    } else if (block === "administrative") {
+      if (num == 50 || num == 51 || num == 52) return "ground";
+      else if (num == 30 || num == 36 || num == 37 || num == 46 || num == 47) return "first";
+      else if(num==38 || num==39 || num==32 || num==53 || num==54 || num == 55|| num==33 || num==24 || num==25 || num==26 || num==43 || num==42 || num==49 || num==48) return "second";
+      else return "third";
+    }
+    return null;
+  }
+
+  /* =========================
+     UI wiring + map handling
+     ========================= */
+  var map = null;
+  var frontPage = document.getElementById("frontPage");
+  var mapPage = document.getElementById("mapPage");
+  var routeInfo = document.getElementById("routeInfo");
+  var startBtn = document.getElementById("startBtn");
+  var backBtn = document.getElementById("backBtn");
+
+  startBtn.addEventListener("click", function() {
+    const selectedBlock = document.getElementById("blockSelect").value;
+    const destination = document.getElementById("endSelect").value;
+
+    if (!selectedBlock || !destination) {
+      showMessage("Please select both Block and Destination.");
+      return;
+    }
+
+    const destBlock = findBlock(destination);
+
+    if (destBlock === "invalid") {
+      showMessage("Invalid destination selected!");
+      return;
+    }
+
+    if (selectedBlock !== destBlock) {
+      showMessage("⚠ Destination belongs to another block!");
+      return;
+    }
+
+    frontPage.style.display = "none";
+    mapPage.style.display = "block";
+
+    navigate(selectedBlock, destination);
+  });
+
+  backBtn.addEventListener("click", function() {
+    mapPage.style.display = "none";
+    frontPage.style.display = "flex";
+    if (map) { map.remove(); map = null; }
+  });
+
+  /* =========================
+     Main navigation logic
+     ========================= */
+  function navigate(block, destination) {
+    const floor = findFloor(block, destination);
+    const startFloor = "ground";
+    const endFloor = floor;
+
+    if (startFloor === endFloor) {
+      renderFloor(block, startFloor, "entrance", destination);
+    } else {
+      const connectionKey = `${startFloor}-${endFloor}`;
+      const connection = floorConnections[block][connectionKey];
+
+      // Render ground with path to stairs first
+      renderFloor(block, startFloor, "entrance", "stairs");
+
+      // Show instruction for stair transition
+      showMessage(`Take stairs to reach <b>${endFloor.toUpperCase()}</b> floor`);
+
+      // then render destination floor after short delay so user sees stair location first
+      setTimeout(() => {
+        renderFloor(block, endFloor, "stairs", destination);
+      }, 1400); // shorter delay but clear enough
+    }
+  }
+
+  /* ==========================================================
+     RENDER FLOOR — includes the zoom fix so full floor visible
+     ========================================================== */
+  function renderFloor(block, floor, start, end) {
+    // remove previous map if exists
+    if (map) { map.remove(); map = null; }
+
+    var data = blockData[block][floor];
+
+    // create map with simple CRS for image overlay
+    map = L.map('map', { crs: L.CRS.Simple, zoomControl: true });
+
+    // bounds must be [ [0,0], [height, width] ] because Leaflet expects [y,x]
+    var bounds = [[0, 0], [data.height, data.width]];
+
+    // image overlay
+    L.imageOverlay(data.image, bounds).addTo(map);
+
+    // FIT BOUNDS with padding so whole floor is visible (like your first image)
+    map.fitBounds(bounds, { padding: [50, 50] });
+
+    // compute bestZoom and lock minZoom so Leaflet doesn't auto-zoom in
+    const bestZoom = map.getBoundsZoom(bounds, true);
+    map.setZoom(bestZoom);
+    map.setMinZoom(bestZoom);
+
+    // Add markers with popups (optional)
+    for (let loc in data.locations) {
+      L.marker(data.locations[loc]).addTo(map).bindPopup(loc);
+    }
+
+    // Draw path if exists
+    const pathKey = `${start}-${end}`;
+    const path = data.paths[pathKey];
+    routeInfo.innerText = `${block.toUpperCase()} BLOCK | ${floor.toUpperCase()} FLOOR | ${start} ➜ ${end}`;
+
+    if (path) {
+      L.polyline(path, {
+        color: "red",
+        weight: 5,
+        className: "moving-dots"
+      }).addTo(map);
+    } else {
+      showMessage(`No path between ${start} and ${end}`);
+    }
+
+    // Optional: bring routeInfo and zoom control above overlay
+    // (Leaflet controls are added automatically)
+  }
+
+  // End of script
+</script>
+
+</body>
+</html>
